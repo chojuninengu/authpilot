@@ -1,0 +1,59 @@
+{
+  "patient_context": {
+    "patient_id": "592011",
+    "raw_context": {
+      "allergies": [],
+      "conditions": [],
+      "coverage": [],
+      "medications": [],
+      "observations": [],
+      "patient": {
+        "issue": [
+          {
+            "code": "processing",
+            "diagnostics": "HAPI-2001: Resource Patient/592011 is not known",
+            "severity": "error"
+          }
+        ],
+        "resourceType": "OperationOutcome",
+        "text": {
+          "div": "<div xmlns=\"http://www.w3.org/1999/xhtml\"><h1>Operation Outcome</h1><table border=\"0\"><tr><td style=\"font-weight: bold;\">ERROR</td><td>[]</td><td>HAPI-2001: Resource Patient/592011 is not known</td></tr></table></div>",
+          "status": "generated"
+        }
+      }
+    },
+    "success": true,
+    "summary": {
+      "active_conditions": [],
+      "active_medications": [],
+      "allergies": [],
+      "birth_date": null,
+      "gender": null,
+      "member_id": null,
+      "name": "Unknown",
+      "payer": null,
+      "recent_labs": []
+    }
+  },
+  "auth_check": {
+    "da_vinci_crd_compliant": true,
+    "documentation_required": [
+      "Physician order with clinical indication",
+      "Recent office visit notes (within 90 days)",
+      "Prior treatment history",
+      "ICD-10 diagnosis codes"
+    ],
+    "notes": "Most payers require 6-week conservative therapy trial for musculoskeletal indications. Neurological indications may bypass this requirement.",
+    "payer_criteria": [
+      "Symptoms present for minimum 6 weeks with conservative treatment failure",
+      "Clinical indication documented in chart notes",
+      "Alternative imaging (X-ray/CT) attempted when appropriate"
+    ],
+    "prior_auth_required": true,
+    "service_code": "70553",
+    "service_description": "MRI Brain with Contrast",
+    "success": true,
+    "typical_turnaround_hours": 72,
+    "urgency_level": "routine"
+  }
+}
