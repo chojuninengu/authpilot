@@ -11,3 +11,5 @@ services:
         value: https://hapi.fhir.org/baseR4
       - key: RUST_LOG
         value: authpilot=info
+      - key: PORT
+        value: 8081
