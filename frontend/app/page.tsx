@@ -141,14 +141,6 @@ export default function AuthPilotDashboard() {
       fontFamily: "'IBM Plex Mono','Courier New',monospace"
     }}>
 
-      {/* Shimmer keyframe for loading skeletons */}
-      <style>{`
-        @keyframes authpilot-shimmer {
-          0% { background-position: -400px 0; }
-          100% { background-position: 400px 0; }
-        }
-      `}</style>
-
       {/* Background grid */}
       <div style={{
         position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0,
