@@ -71,13 +71,14 @@ async fn main() {
         .layer(cors)
         .with_state(state);
 
-    let port = std::env::var("PORT").unwrap_or_else(|_| "8080".to_string());
+    let port = std::env::var("PORT").unwrap_or_else(|_| "8081".to_string());
     let addr = format!("0.0.0.0:{}", port);
 
     tracing::info!("🏥 AuthPilot MCP Server starting on {}", addr);
     tracing::info!("📋 FHIR endpoint: https://hapi.fhir.org/baseR4");
     tracing::info!("🤖 Gemini 2.5 Flash: ready");
     tracing::info!("✅ Health check: http://{}/health", addr);
+    tracing::info!("🚀 Default port is now 8081");
 
     let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
     axum::serve(listener, app).await.unwrap();
