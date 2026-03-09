@@ -3,11 +3,25 @@ import { useState, useEffect } from "react";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "https://authpilot-yx1m.onrender.com";
 
-const DEMO_CASES = [
-  { id: "PA-2024-001", patient: "Eleanor Vance", age: 52, service: "MRI Brain with Contrast", code: "70553", status: "approved", confidence: 94, payer: "BlueCross BlueShield", submitted: "2 hours ago", conditions: ["Recurring Migraines", "Hypertension"] },
-  { id: "PA-2024-002", patient: "Marcus Webb", age: 41, service: "Adalimumab (Humira) Injection", code: "J0135", status: "pending", confidence: 78, payer: "Aetna", submitted: "5 hours ago", conditions: ["Rheumatoid Arthritis", "DMARD failure"] },
-  { id: "PA-2024-003", patient: "Priya Nair", age: 67, service: "Home Health Skilled Nursing", code: "G0299", status: "needs_info", confidence: 55, payer: "Medicare Advantage", submitted: "1 day ago", conditions: ["CHF", "Post-surgical recovery"] },
-  { id: "PA-2024-004", patient: "James Okoye", age: 38, service: "MRI Lumbar Spine", code: "72148", status: "approved", confidence: 91, payer: "UnitedHealth", submitted: "3 days ago", conditions: ["Lumbar radiculopathy", "Conservative therapy failed"] },
+interface CaseItem {
+  id: string;
+  patient: string;
+  age: number | string;
+  service: string;
+  code: string;
+  status: string;
+  confidence: number;
+  payer: string;
+  submitted: string;
+  conditions: string[];
+  source: "live" | "demo";
+}
+
+const DEMO_CASES: CaseItem[] = [
+  { id: "PA-2024-001", patient: "Eleanor Vance", age: 52, service: "MRI Brain with Contrast", code: "70553", status: "approved", confidence: 94, payer: "BlueCross BlueShield", submitted: "2 hours ago", conditions: ["Recurring Migraines", "Hypertension"], source: "demo" },
+  { id: "PA-2024-002", patient: "Marcus Webb", age: 41, service: "Adalimumab (Humira) Injection", code: "J0135", status: "pending", confidence: 78, payer: "Aetna", submitted: "5 hours ago", conditions: ["Rheumatoid Arthritis", "DMARD failure"], source: "demo" },
+  { id: "PA-2024-003", patient: "Priya Nair", age: 67, service: "Home Health Skilled Nursing", code: "G0299", status: "needs_info", confidence: 55, payer: "Medicare Advantage", submitted: "1 day ago", conditions: ["CHF", "Post-surgical recovery"], source: "demo" },
+  { id: "PA-2024-004", patient: "James Okoye", age: 38, service: "MRI Lumbar Spine", code: "72148", status: "approved", confidence: 91, payer: "UnitedHealth", submitted: "3 days ago", conditions: ["Lumbar radiculopathy", "Conservative therapy failed"], source: "demo" },
 ];
 
 const STATUS_CONFIG: Record<string, { label: string, dot: string, bg: string, text: string }> = {
@@ -23,11 +37,66 @@ export default function AuthPilotDashboard() {
   const [newPA, setNewPA] = useState({ patientId: "", serviceCode: "", serviceDesc: "", notes: "" });
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<any>(null);
+  const [cases, setCases] = useState<CaseItem[]>(DEMO_CASES);
+  const [casesLoading, setCasesLoading] = useState(true);
+  const [dataSource, setDataSource] = useState<"live" | "fallback">("fallback");
 
   useEffect(() => {
     fetch(`${BACKEND_URL}/health`)
       .then(r => setBackendStatus(r.ok ? "online" : "offline"))
       .catch(() => setBackendStatus("offline"));
+  }, []);
+
+  // Fetch live FHIR patient data + PA auth-check on mount
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const [ctxRes, authRes] = await Promise.all([
+          fetch(`${BACKEND_URL}/tools/patient-context`, {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ patient_id: "592011", fhir_base_url: "https://hapi.fhir.org/baseR4" }),
+          }).then(r => r.json()),
+          fetch(`${BACKEND_URL}/tools/auth-check`, {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ service_code: "70553", service_description: "MRI Brain with Contrast" }),
+          }).then(r => r.json()),
+        ]);
+        if (cancelled) return;
+
+        if (ctxRes.success && authRes.success) {
+          const summary = ctxRes.summary || {};
+          const patientName = summary.name || "FHIR Patient";
+          const conditions: string[] = (summary.active_conditions && summary.active_conditions.length > 0)
+            ? summary.active_conditions.slice(0, 4)
+            : ["No active conditions"];
+          const payer = summary.payer || "Unknown Payer";
+          const birthDate = summary.birth_date || "";
+          const age = birthDate ? new Date().getFullYear() - new Date(birthDate).getFullYear() : "—";
+
+          const liveCase: CaseItem = {
+            id: `PA-LIVE-${ctxRes.patient_id}`,
+            patient: patientName,
+            age,
+            service: authRes.service_description || "MRI Brain with Contrast",
+            code: authRes.service_code || "70553",
+            status: authRes.prior_auth_required ? "pending" : "approved",
+            confidence: authRes.prior_auth_required ? 82 : 95,
+            payer,
+            submitted: "just now",
+            conditions,
+            source: "live",
+          };
+
+          setCases([liveCase, ...DEMO_CASES.slice(1)]);
+          setDataSource("live");
+        }
+      } catch {
+        // Backend unreachable — keep DEMO_CASES fallback
+      }
+      if (!cancelled) setCasesLoading(false);
+    })();
+    return () => { cancelled = true; };
   }, []);
 
   const runPipeline = async () => {
@@ -60,6 +129,14 @@ export default function AuthPilotDashboard() {
       minHeight: "100vh", background: "#080c14", color: "#e2e8f0",
       fontFamily: "'IBM Plex Mono','Courier New',monospace"
     }}>
+
+      {/* Shimmer keyframe for loading skeletons */}
+      <style>{`
+        @keyframes authpilot-shimmer {
+          0% { background-position: -400px 0; }
+          100% { background-position: 400px 0; }
+        }
+      `}</style>
 
       {/* Background grid */}
       <div style={{
@@ -163,98 +240,152 @@ export default function AuthPilotDashboard() {
         {/* ── CASES ── */}
         {activeTab === "cases" && (
           <div style={{ display: "grid", gap: 10 }}>
-            {DEMO_CASES.map((c, i) => {
-              const s = STATUS_CONFIG[c.status] || STATUS_CONFIG.pending;
-              const open = selected === i;
-              return (
-                <div key={i} onClick={() => setSelected(open ? null : i)}
-                  style={{
-                    background: open ? "rgba(0,212,255,0.04)" : "rgba(255,255,255,0.02)",
-                    border: `1px solid ${open ? "rgba(0,212,255,0.35)" : "rgba(255,255,255,0.06)"}`,
-                    borderRadius: 12, padding: "18px 22px", cursor: "pointer", transition: "all 0.2s"
-                  }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
-                    <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
+            {casesLoading ? (
+              // Loading skeleton cards
+              Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} style={{
+                  background: "rgba(255,255,255,0.02)",
+                  border: "1px solid rgba(255,255,255,0.06)",
+                  borderRadius: 12, padding: "18px 22px"
+                }}>
+                  <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
+                    <div style={{
+                      width: 38, height: 38, borderRadius: 9, flexShrink: 0,
+                      background: "linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.07) 50%, rgba(255,255,255,0.03) 75%)",
+                      backgroundSize: "800px 100%",
+                      animation: "authpilot-shimmer 1.5s infinite linear"
+                    }} />
+                    <div style={{ flex: 1 }}>
                       <div style={{
-                        width: 38, height: 38, borderRadius: 9, flexShrink: 0,
-                        background: "linear-gradient(135deg,#1e3a5f,#0f1f35)",
-                        border: "1px solid rgba(0,212,255,0.18)",
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        fontSize: 13, fontWeight: 700, color: "#60a5fa"
-                      }}>
-                        {c.patient.split(" ").map(n => n[0]).join("")}
-                      </div>
-                      <div>
-                        <div style={{ fontWeight: 700, fontSize: 14, color: "#f1f5f9" }}>{c.patient}</div>
-                        <div style={{ fontSize: 11, color: "#334155", marginTop: 2 }}>{c.age}y · {c.id} · {c.payer}</div>
-                      </div>
-                    </div>
-                    <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                      <div>
-                        <div style={{ fontSize: 9, color: "#334155", letterSpacing: 1.5, marginBottom: 4, textAlign: "right" }}>CONFIDENCE</div>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                          <div style={{ width: 72, height: 4, background: "rgba(255,255,255,0.07)", borderRadius: 2 }}>
-                            <div style={{
-                              height: "100%", borderRadius: 2,
-                              width: `${c.confidence}%`,
-                              background: c.confidence > 85 ? "#22c55e" : c.confidence > 65 ? "#f59e0b" : "#ef4444"
-                            }} />
-                          </div>
-                          <span style={{
-                            fontSize: 12, fontWeight: 700,
-                            color: c.confidence > 85 ? "#4ade80" : c.confidence > 65 ? "#fbbf24" : "#f87171"
-                          }}>
-                            {c.confidence}%
-                          </span>
-                        </div>
-                      </div>
+                        width: "40%", height: 14, borderRadius: 4, marginBottom: 6,
+                        background: "linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.04) 75%)",
+                        backgroundSize: "800px 100%",
+                        animation: "authpilot-shimmer 1.5s infinite linear"
+                      }} />
                       <div style={{
-                        padding: "4px 12px", borderRadius: 20, fontSize: 11,
-                        background: s.bg, color: s.text, border: `1px solid ${s.dot}44`,
-                        display: "flex", alignItems: "center", gap: 6
-                      }}>
-                        <div style={{ width: 5, height: 5, borderRadius: "50%", background: s.dot }} />
-                        {s.label}
-                      </div>
+                        width: "60%", height: 10, borderRadius: 3,
+                        background: "linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.06) 50%, rgba(255,255,255,0.03) 75%)",
+                        backgroundSize: "800px 100%",
+                        animation: "authpilot-shimmer 1.5s infinite linear"
+                      }} />
                     </div>
                   </div>
-                  <div style={{ marginTop: 12, display: "flex", gap: 7, flexWrap: "wrap" }}>
-                    {[c.service, `CPT ${c.code}`, ...c.conditions].map((tag, ti) => (
-                      <span key={ti} style={{
-                        fontSize: 10, color: ti === 0 ? "#94a3b8" : "#475569",
-                        background: "rgba(255,255,255,0.03)", padding: "3px 9px",
-                        borderRadius: 5, border: "1px solid rgba(255,255,255,0.05)"
-                      }}>{tag}</span>
+                  <div style={{ display: "flex", gap: 7, marginTop: 12 }}>
+                    {["45%", "20%", "25%"].map((w, wi) => (
+                      <div key={wi} style={{
+                        width: w, height: 18, borderRadius: 5,
+                        background: "linear-gradient(90deg, rgba(255,255,255,0.02) 25%, rgba(255,255,255,0.05) 50%, rgba(255,255,255,0.02) 75%)",
+                        backgroundSize: "800px 100%",
+                        animation: "authpilot-shimmer 1.5s infinite linear"
+                      }} />
                     ))}
-                    <span style={{ fontSize: 10, color: "#1e293b", marginLeft: "auto" }}>{c.submitted}</span>
                   </div>
-                  {open && (
-                    <div style={{ marginTop: 18, paddingTop: 18, borderTop: "1px solid rgba(255,255,255,0.05)" }}>
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-                        <div style={{ background: "rgba(0,0,0,0.35)", borderRadius: 8, padding: 14 }}>
-                          <div style={{ fontSize: 9, color: "#00d4ff", letterSpacing: 2, marginBottom: 8 }}>FHIR RESOURCES CREATED</div>
-                          {[`Claim/${c.id}`, `DocumentReference/doc-${c.id}`, `Provenance/${c.id}-prov`].map((r, ri) => (
-                            <div key={ri} style={{
-                              fontSize: 10, color: "#334155", padding: "3px 0",
-                              borderBottom: "1px solid rgba(255,255,255,0.03)", fontFamily: "monospace"
-                            }}>✓ {r}</div>
-                          ))}
+                </div>
+              ))
+            ) : (
+              // Real / fallback case cards
+              cases.map((c, i) => {
+                const s = STATUS_CONFIG[c.status] || STATUS_CONFIG.pending;
+                const open = selected === i;
+                return (
+                  <div key={i} onClick={() => setSelected(open ? null : i)}
+                    style={{
+                      background: open ? "rgba(0,212,255,0.04)" : "rgba(255,255,255,0.02)",
+                      border: `1px solid ${open ? "rgba(0,212,255,0.35)" : "rgba(255,255,255,0.06)"}`,
+                      borderRadius: 12, padding: "18px 22px", cursor: "pointer", transition: "all 0.2s"
+                    }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
+                      <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
+                        <div style={{
+                          width: 38, height: 38, borderRadius: 9, flexShrink: 0,
+                          background: "linear-gradient(135deg,#1e3a5f,#0f1f35)",
+                          border: "1px solid rgba(0,212,255,0.18)",
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          fontSize: 13, fontWeight: 700, color: "#60a5fa"
+                        }}>
+                          {c.patient.split(" ").map(n => n[0]).join("")}
                         </div>
-                        <div style={{ background: "rgba(0,0,0,0.35)", borderRadius: 8, padding: 14 }}>
-                          <div style={{ fontSize: 9, color: "#00d4ff", letterSpacing: 2, marginBottom: 8 }}>AGENT PIPELINE</div>
-                          {["get_patient_clinical_context", "check_prior_auth_required", "build_clinical_justification", "submit_prior_auth_request"].map((t, ti) => (
-                            <div key={ti} style={{
-                              fontSize: 10, color: "#4ade80", padding: "3px 0",
-                              borderBottom: "1px solid rgba(255,255,255,0.03)", fontFamily: "monospace"
-                            }}>✓ {t}</div>
-                          ))}
+                        <div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <span style={{ fontWeight: 700, fontSize: 14, color: "#f1f5f9" }}>{c.patient}</span>
+                            <span style={{
+                              fontSize: 8, fontWeight: 700, letterSpacing: 1.5, padding: "2px 6px",
+                              borderRadius: 4, textTransform: "uppercase" as const,
+                              background: c.source === "live" ? "rgba(0,212,255,0.12)" : "rgba(255,255,255,0.04)",
+                              color: c.source === "live" ? "#00d4ff" : "#334155",
+                              border: `1px solid ${c.source === "live" ? "rgba(0,212,255,0.3)" : "rgba(255,255,255,0.06)"}`
+                            }}>{c.source === "live" ? "⚡ LIVE" : "DEMO"}</span>
+                          </div>
+                          <div style={{ fontSize: 11, color: "#334155", marginTop: 2 }}>{c.age}y · {c.id} · {c.payer}</div>
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                        <div>
+                          <div style={{ fontSize: 9, color: "#334155", letterSpacing: 1.5, marginBottom: 4, textAlign: "right" }}>CONFIDENCE</div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <div style={{ width: 72, height: 4, background: "rgba(255,255,255,0.07)", borderRadius: 2 }}>
+                              <div style={{
+                                height: "100%", borderRadius: 2,
+                                width: `${c.confidence}%`,
+                                background: c.confidence > 85 ? "#22c55e" : c.confidence > 65 ? "#f59e0b" : "#ef4444"
+                              }} />
+                            </div>
+                            <span style={{
+                              fontSize: 12, fontWeight: 700,
+                              color: c.confidence > 85 ? "#4ade80" : c.confidence > 65 ? "#fbbf24" : "#f87171"
+                            }}>
+                              {c.confidence}%
+                            </span>
+                          </div>
+                        </div>
+                        <div style={{
+                          padding: "4px 12px", borderRadius: 20, fontSize: 11,
+                          background: s.bg, color: s.text, border: `1px solid ${s.dot}44`,
+                          display: "flex", alignItems: "center", gap: 6
+                        }}>
+                          <div style={{ width: 5, height: 5, borderRadius: "50%", background: s.dot }} />
+                          {s.label}
                         </div>
                       </div>
                     </div>
-                  )}
-                </div>
-              );
-            })}
+                    <div style={{ marginTop: 12, display: "flex", gap: 7, flexWrap: "wrap" }}>
+                      {[c.service, `CPT ${c.code}`, ...c.conditions].map((tag, ti) => (
+                        <span key={ti} style={{
+                          fontSize: 10, color: ti === 0 ? "#94a3b8" : "#475569",
+                          background: "rgba(255,255,255,0.03)", padding: "3px 9px",
+                          borderRadius: 5, border: "1px solid rgba(255,255,255,0.05)"
+                        }}>{tag}</span>
+                      ))}
+                      <span style={{ fontSize: 10, color: "#1e293b", marginLeft: "auto" }}>{c.submitted}</span>
+                    </div>
+                    {open && (
+                      <div style={{ marginTop: 18, paddingTop: 18, borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+                          <div style={{ background: "rgba(0,0,0,0.35)", borderRadius: 8, padding: 14 }}>
+                            <div style={{ fontSize: 9, color: "#00d4ff", letterSpacing: 2, marginBottom: 8 }}>FHIR RESOURCES CREATED</div>
+                            {[`Claim/${c.id}`, `DocumentReference/doc-${c.id}`, `Provenance/${c.id}-prov`].map((r, ri) => (
+                              <div key={ri} style={{
+                                fontSize: 10, color: "#334155", padding: "3px 0",
+                                borderBottom: "1px solid rgba(255,255,255,0.03)", fontFamily: "monospace"
+                              }}>✓ {r}</div>
+                            ))}
+                          </div>
+                          <div style={{ background: "rgba(0,0,0,0.35)", borderRadius: 8, padding: 14 }}>
+                            <div style={{ fontSize: 9, color: "#00d4ff", letterSpacing: 2, marginBottom: 8 }}>AGENT PIPELINE</div>
+                            {["get_patient_clinical_context", "check_prior_auth_required", "build_clinical_justification", "submit_prior_auth_request"].map((t, ti) => (
+                              <div key={ti} style={{
+                                fontSize: 10, color: "#4ade80", padding: "3px 0",
+                                borderBottom: "1px solid rgba(255,255,255,0.03)", fontFamily: "monospace"
+                              }}>✓ {t}</div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            )}
           </div>
         )}
 
