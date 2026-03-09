@@ -219,7 +219,7 @@ authpilot/
  | Secret | Description |
  |--------|-------------|
  | `RENDER_DEPLOY_HOOK` | The "Deploy Hook" URL from your Render Service dashboard. |
- | `BACKEND_URL` | The public URL of your deployed backend (e.g., `https://authpilot-api.onrender.com`). |
+ | `BACKEND_URL` | The public URL of your deployed backend (e.g., `https://authpilot-yx1m.onrender.com`). |
  | `GEMINI_API_KEY` | Your Google AI Studio API key (used by the frontend for build-time config). |
  
  *Note: The deployment workflows will skip the deployment step if these secrets are missing.*
