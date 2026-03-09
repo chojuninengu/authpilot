@@ -211,8 +211,22 @@ authpilot/
 - [ ] EHR launch context (Epic, Cerner)
 
 ---
-
-## 📄 License
+ 
+ ## 🚀 Deployment Configuration
+ 
+ To enable automated deployments via GitHub Actions, you must configure the following **GitHub Secrets** in your repository settings (`Settings > Secrets and variables > Actions`):
+ 
+ | Secret | Description |
+ |--------|-------------|
+ | `RENDER_DEPLOY_HOOK` | The "Deploy Hook" URL from your Render Service dashboard. |
+ | `BACKEND_URL` | The public URL of your deployed backend (e.g., `https://authpilot-api.onrender.com`). |
+ | `GEMINI_API_KEY` | Your Google AI Studio API key (used by the frontend for build-time config). |
+ 
+ *Note: The deployment workflows will skip the deployment step if these secrets are missing.*
+ 
+ ---
+ 
+ ## 📄 License
 
 MIT — free to use, modify, and deploy.
 
