@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "https://authpilot-api.onrender.com";
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "https://authpilot-yx1m.onrender.com";
 
 const DEMO_CASES = [
   { id: "PA-2024-001", patient: "Eleanor Vance", age: 52, service: "MRI Brain with Contrast", code: "70553", status: "approved", confidence: 94, payer: "BlueCross BlueShield", submitted: "2 hours ago", conditions: ["Recurring Migraines", "Hypertension"] },
