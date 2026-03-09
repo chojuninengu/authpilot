@@ -11,9 +11,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Trigger Render Deploy
+        if: env.RENDER_DEPLOY_HOOK != ''
+        env:
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
         run: |
-          curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}"
+          curl -X POST "${{ env.RENDER_DEPLOY_HOOK }}"
+      - name: Skip Deploy (Secret Missing)
+        if: env.RENDER_DEPLOY_HOOK == ''
+        env:
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+        run: |
+          echo "RENDER_DEPLOY_HOOK secret is not set. Skipping deployment."
+          echo "Please add RENDER_DEPLOY_HOOK to your GitHub repository secrets."
       - name: Verify health
+        if: env.RENDER_DEPLOY_HOOK != '' && env.BACKEND_URL != ''
+        env:
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+          BACKEND_URL: ${{ secrets.BACKEND_URL }}
         run: |
           sleep 30
-          curl -f "${{ secrets.BACKEND_URL }}/health"
+          curl -f "${{ env.BACKEND_URL }}/health"
