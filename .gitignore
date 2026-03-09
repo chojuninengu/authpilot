@@ -6,7 +6,6 @@
 
 # Rust
 backend/target/
-backend/Cargo.lock
 
 # Node
 frontend/node_modules/
