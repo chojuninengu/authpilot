@@ -67,6 +67,7 @@ async fn main() {
         // ── MCP Protocol endpoint (Prompt Opinion integration) ───
         .route("/mcp",            post(mcp::handle_mcp_request))
         .route("/mcp/manifest",   get(mcp::get_manifest))
+        .route_layer(axum::middleware::from_fn(auth_middleware))
 
         .layer(cors)
         .with_state(state);
@@ -82,4 +83,22 @@ async fn main() {
 
     let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
     axum::serve(listener, app).await.unwrap();
+}
+async fn auth_middleware(
+    req: axum::extract::Request,
+    next: axum::middleware::Next,
+) -> Result<axum::response::Response, axum::http::StatusCode> {
+    // Check for AUTH_PILOT_KEY in env. If not set, allow all for hackathon simplicity.
+    if let Ok(expected_key) = std::env::var("AUTH_PILOT_KEY") {
+        if let Some(actual_key) = req.headers().get("X-AuthPilot-Key") {
+            if actual_key == &expected_key {
+                return Ok(next.run(req).await);
+            }
+        }
+        tracing::warn!("Unauthorized access attempt to MCP endpoint");
+        return Err(axum::http::StatusCode::UNAUTHORIZED);
+    }
+    
+    // Default: allow (hackathon mode)
+    Ok(next.run(req).await)
 }
