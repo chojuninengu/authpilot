@@ -95,9 +95,9 @@ cp .env.example .env
 # Add your GEMINI_API_KEY to .env
 
 cargo run
-# Server starts at http://localhost:8080
-# Health check: http://localhost:8080/health
-# MCP manifest: http://localhost:8080/mcp/manifest
+# Server starts at http://localhost:8081
+# Health check: http://localhost:8081/health
+# MCP manifest: http://localhost:8081/mcp/manifest
 ```
 
 ### Frontend
@@ -106,7 +106,7 @@ cargo run
 cd frontend
 npm install
 cp .env.local.example .env.local
-# Set NEXT_PUBLIC_BACKEND_URL=http://localhost:8080
+# Set NEXT_PUBLIC_BACKEND_URL=http://localhost:8081
 
 npm run dev
 # Dashboard at http://localhost:3000
