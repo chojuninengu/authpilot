@@ -31,7 +31,7 @@ pub async fn build_clinical_justification(
             Json(serde_json::json!({
                 "success": true,
                 "justification": parsed,
-                "model": "gemini-2.5-flash",
+                "model": "gemini-1.5-flash-latest",
                 "fhir_compliant": true
             }))
         }
@@ -111,7 +111,7 @@ Ordering Provider: {}
 
 async fn call_gemini(state: &AppState, prompt: &str) -> anyhow::Result<String> {
     let url = format!(
-        "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-04-17:generateContent?key={}",
+        "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key={}",
         state.gemini_api_key
     );
 
