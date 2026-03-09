@@ -56,7 +56,7 @@ export default function AuthPilotDashboard() {
         const [ctxRes, authRes] = await Promise.all([
           fetch(`${BACKEND_URL}/tools/patient-context`, {
             method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ patient_id: "131268989", fhir_base_url: "https://hapi.fhir.org/baseR4" }),
+            body: JSON.stringify({ patient_id: "131268989", fhir_base_url: "https://app.promptopinion.ai/api/workspaces/019cd3a6-9e78-72d4-8c89-88bcaa1c155c/fhir" }),
           }).then(r => r.json()),
           fetch(`${BACKEND_URL}/tools/auth-check`, {
             method: "POST", headers: { "Content-Type": "application/json" },
