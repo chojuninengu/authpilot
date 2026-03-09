@@ -1,10 +1,10 @@
 //! Tool 3: build_clinical_justification
-//! The AI engine — uses Gemini 2.5 Flash to reason across patient data
+//! The AI engine — uses Gemini 1.5 Flash to reason across patient data
 //! and construct a compelling, evidence-grounded PA justification.
 //! This is what rule-based systems CANNOT do.
 
 use axum::{extract::State, Json};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use crate::AppState;
 
@@ -31,7 +31,7 @@ pub async fn build_clinical_justification(
             Json(serde_json::json!({
                 "success": true,
                 "justification": parsed,
-                "model": "gemini-1.5-flash-latest",
+                "model": "gemini-1.5-flash",
                 "fhir_compliant": true
             }))
         }
@@ -121,8 +121,7 @@ async fn call_gemini(state: &AppState, prompt: &str) -> anyhow::Result<String> {
         }],
         "generationConfig": {
             "temperature": 0.2,
-            "maxOutputTokens": 4096,
-            "responseMimeType": "application/json"
+            "maxOutputTokens": 4096
         },
         "safetySettings": [
             {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
