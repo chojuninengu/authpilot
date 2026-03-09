@@ -38,7 +38,7 @@ export default function AuthPilotDashboard() {
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [cases, setCases] = useState<CaseItem[]>(DEMO_CASES);
-  const [casesLoading, setCasesLoading] = useState(true);
+  const [casesLoading, setCasesLoading] = useState(false);
   const [dataSource, setDataSource] = useState<"live" | "fallback">("fallback");
 
   useEffect(() => {
@@ -50,6 +50,7 @@ export default function AuthPilotDashboard() {
   // Fetch live FHIR patient data + PA auth-check on mount
   useEffect(() => {
     let cancelled = false;
+    setCasesLoading(true);
     (async () => {
       try {
         const [ctxRes, authRes] = await Promise.all([
@@ -135,7 +136,7 @@ export default function AuthPilotDashboard() {
   ];
 
   return (
-    <div suppressHydrationWarning style={{
+    <div style={{
       minHeight: "100vh", background: "#080c14", color: "#e2e8f0",
       fontFamily: "'IBM Plex Mono','Courier New',monospace"
     }}>
