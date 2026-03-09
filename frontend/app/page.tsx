@@ -55,7 +55,7 @@ export default function AuthPilotDashboard() {
         const [ctxRes, authRes] = await Promise.all([
           fetch(`${BACKEND_URL}/tools/patient-context`, {
             method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ patient_id: "592011", fhir_base_url: "https://hapi.fhir.org/baseR4" }),
+            body: JSON.stringify({ patient_id: "131268989", fhir_base_url: "https://hapi.fhir.org/baseR4" }),
           }).then(r => r.json()),
           fetch(`${BACKEND_URL}/tools/auth-check`, {
             method: "POST", headers: { "Content-Type": "application/json" },
@@ -66,7 +66,17 @@ export default function AuthPilotDashboard() {
 
         if (ctxRes.success && authRes.success) {
           const summary = ctxRes.summary || {};
-          const patientName = summary.name || "FHIR Patient";
+          // Build full name from raw FHIR given+family, fall back to summary.name
+          let patientName = "FHIR Patient";
+          const rawName = ctxRes.raw_context?.patient?.name?.[0];
+          if (rawName) {
+            const given = Array.isArray(rawName.given) ? rawName.given.join(" ") : "";
+            const family = rawName.family || "";
+            const full = [given, family].filter(Boolean).join(" ");
+            if (full) patientName = full;
+          } else if (summary.name && summary.name !== "Unknown") {
+            patientName = summary.name;
+          }
           const conditions: string[] = (summary.active_conditions && summary.active_conditions.length > 0)
             ? summary.active_conditions.slice(0, 4)
             : ["No active conditions"];
@@ -125,7 +135,7 @@ export default function AuthPilotDashboard() {
   ];
 
   return (
-    <div style={{
+    <div suppressHydrationWarning style={{
       minHeight: "100vh", background: "#080c14", color: "#e2e8f0",
       fontFamily: "'IBM Plex Mono','Courier New',monospace"
     }}>
