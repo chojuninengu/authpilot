@@ -1,0 +1,20 @@
+{
+    "scenario_a": {
+        "patient_id": "131328281",
+        "label": "Happy Path — Migraine, MRI Brain",
+        "service_code": "70553",
+        "expected_confidence": "90+"
+    },
+    "scenario_b": {
+        "patient_id": "131328313",
+        "label": "Borderline — Back Pain, insufficient therapy",
+        "service_code": "72148",
+        "expected_confidence": "55-70"
+    },
+    "scenario_c": {
+        "patient_id": "131328357",
+        "label": "Urgent — Neurological, bypass PA",
+        "service_code": "70553",
+        "expected_confidence": "N/A"
+    }
+}
