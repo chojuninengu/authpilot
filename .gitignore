@@ -1,16 +1,20 @@
-# Environment
+# Environment — NEVER commit these
 .env
 .env.local
 .env.*.local
+backend/.env
+frontend/.env.local
 *.env
 
 # Rust
 backend/target/
+backend/Cargo.lock
 
 # Node
 frontend/node_modules/
 frontend/.next/
 frontend/out/
+frontend/package-lock.json
 
 # OS
 .DS_Store
@@ -20,4 +24,3 @@ Thumbs.db
 .idea/
 .vscode/
 *.swp
-target
